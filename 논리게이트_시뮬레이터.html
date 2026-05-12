@@ -1,0 +1,825 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>논리 게이트 시뮬레이터</title>
+<style>
+:root {
+  --bg: #0f1923;
+  --card: #162030;
+  --border: #1e3a5f;
+  --orange: #e87722;
+  --blue: #0072ce;
+  --green: #27ae60;
+  --red: #e74c3c;
+  --yellow: #f1c40f;
+  --text: #e8eaf0;
+  --dim: #7a8ca0;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Malgun Gothic', 'Segoe UI', sans-serif;
+  min-height: 100vh;
+}
+
+/* ── 헤더 ── */
+header {
+  background: linear-gradient(135deg, #091520, #162030);
+  border-bottom: 2px solid var(--border);
+  padding: 18px 24px;
+  text-align: center;
+}
+header h1 { font-size: 22px; font-weight: 900; letter-spacing: 1px; }
+header p { font-size: 13px; color: var(--dim); margin-top: 4px; }
+
+/* ── 게이트 선택 ── */
+.gate-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 16px 20px;
+  background: #0d1620;
+  border-bottom: 1px solid var(--border);
+  justify-content: center;
+}
+.gate-btn {
+  padding: 8px 16px;
+  border-radius: 10px;
+  border: 2px solid var(--border);
+  background: var(--card);
+  color: var(--dim);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all .2s;
+  font-family: inherit;
+}
+.gate-btn:hover { color: var(--text); border-color: #3a6ea8; }
+.gate-btn.active {
+  background: var(--orange);
+  border-color: var(--orange);
+  color: #fff;
+  box-shadow: 0 0 16px #e8772244;
+}
+
+/* ── 메인 레이아웃 ── */
+.main {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 24px 20px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+@media (max-width: 640px) {
+  .main { grid-template-columns: 1fr; }
+}
+
+/* ── 카드 ── */
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 22px;
+}
+.card-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--dim);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 16px;
+}
+
+/* ── 인터랙티브 카드 (왼쪽) ── */
+.interact-card {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* 게이트 이름 배너 */
+.gate-banner {
+  background: linear-gradient(135deg, #091520, var(--border));
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.gate-symbol {
+  font-size: 36px;
+  font-weight: 900;
+  color: var(--orange);
+  min-width: 60px;
+  text-align: center;
+  font-family: monospace;
+}
+.gate-info h2 { font-size: 18px; font-weight: 900; }
+.gate-info p { font-size: 12px; color: var(--dim); margin-top: 3px; }
+.gate-formula {
+  background: #0d1620;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-family: monospace;
+  font-size: 14px;
+  color: var(--orange);
+  margin-top: 6px;
+  display: inline-block;
+}
+
+/* ── 회로 시각화 ── */
+.circuit {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  justify-content: center;
+  padding: 10px 0;
+}
+.inputs-col {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  align-items: flex-end;
+}
+.input-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.input-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--dim);
+  width: 18px;
+  text-align: center;
+}
+.wire-h {
+  height: 3px;
+  width: 28px;
+  background: #2a3f55;
+  border-radius: 2px;
+  transition: background .3s, box-shadow .3s;
+}
+.wire-h.live {
+  background: var(--orange);
+  box-shadow: 0 0 8px var(--orange);
+}
+.gate-body {
+  background: #0d1620;
+  border: 2px solid var(--border);
+  border-radius: 10px;
+  width: 64px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 900;
+  color: var(--orange);
+  text-align: center;
+  transition: border-color .3s, box-shadow .3s;
+  position: relative;
+  flex-shrink: 0;
+}
+.gate-body.glow {
+  border-color: var(--orange);
+  box-shadow: 0 0 20px #e8772244;
+}
+.output-col {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* ── LED ── */
+.led {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 3px solid #2a3f55;
+  background: #0d1620;
+  transition: all .3s;
+  flex-shrink: 0;
+}
+.led.on {
+  background: var(--green);
+  border-color: #4ade80;
+  box-shadow: 0 0 20px var(--green), 0 0 40px #27ae6066;
+}
+.led-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--dim);
+  transition: color .3s;
+  min-width: 40px;
+}
+.led-label.on { color: var(--green); }
+
+/* ── 토글 스위치 ── */
+.switch-section { display: flex; flex-direction: column; gap: 12px; }
+.sw-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: #0d1620;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: border-color .2s;
+  user-select: none;
+}
+.sw-row:hover { border-color: #3a6ea8; }
+.sw-row.single { justify-content: center; }
+
+/* 아케이드 버튼 스타일 */
+.arcade-btn {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  border: 4px solid #1a2e42;
+  background: #1e3a5f;
+  cursor: pointer;
+  transition: all .15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: #5a7a9a;
+  box-shadow: 0 4px 0 #0d1620, 0 6px 12px rgba(0,0,0,.4);
+  position: relative;
+}
+.arcade-btn:active { transform: translateY(3px); box-shadow: 0 1px 0 #0d1620; }
+.arcade-btn.pressed {
+  background: var(--orange);
+  border-color: #fd9644;
+  color: #fff;
+  box-shadow: 0 0 20px #e8772266, 0 4px 0 #8b4510;
+}
+.arcade-btn.pressed:active { transform: translateY(3px); box-shadow: 0 0 20px #e8772266, 0 1px 0 #8b4510; }
+
+.sw-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.sw-name { font-size: 14px; font-weight: 700; }
+.sw-state {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--red);
+  transition: color .2s;
+}
+.sw-state.on { color: var(--green); }
+.sw-volt {
+  font-size: 11px;
+  color: var(--dim);
+  font-family: monospace;
+}
+
+/* ── 진리표 카드 (오른쪽) ── */
+.truth-card { display: flex; flex-direction: column; gap: 16px; }
+
+.truth-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.truth-table th {
+  background: #0d1620;
+  color: var(--orange);
+  padding: 10px 14px;
+  text-align: center;
+  border-bottom: 2px solid var(--border);
+  font-size: 13px;
+}
+.truth-table td {
+  padding: 11px 14px;
+  text-align: center;
+  border-bottom: 1px solid #1a2e42;
+  font-family: monospace;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--dim);
+  transition: all .25s;
+}
+.truth-table tr.active td {
+  background: #1e2e10;
+  color: var(--green);
+}
+.truth-table tr.active td:last-child {
+  font-size: 18px;
+}
+.truth-table tr.active-off td {
+  background: #2e1010;
+  color: var(--red);
+}
+.truth-table tr.active-off td:last-child {
+  font-size: 18px;
+}
+
+/* ── 설명 박스 ── */
+.desc-box {
+  background: #0d1620;
+  border-left: 4px solid var(--orange);
+  border-radius: 0 8px 8px 0;
+  padding: 14px 16px;
+  font-size: 13px;
+  color: var(--dim);
+  line-height: 1.75;
+}
+.desc-box strong { color: var(--orange); }
+.desc-box .result-text {
+  font-size: 15px;
+  font-weight: 700;
+  margin-top: 8px;
+  color: var(--text);
+  min-height: 22px;
+}
+
+/* ── 실무 예시 박스 ── */
+.example-box {
+  background: #162030;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 16px;
+  font-size: 12.5px;
+  color: var(--dim);
+  line-height: 1.75;
+}
+.example-box .ex-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--blue);
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  margin-bottom: 6px;
+}
+.example-box strong { color: var(--text); }
+
+/* 출력 비트 표시 */
+.output-bit {
+  font-size: 48px;
+  font-weight: 900;
+  text-align: center;
+  transition: all .3s;
+  line-height: 1;
+  padding: 8px 0;
+}
+.output-bit.v1 { color: var(--green); text-shadow: 0 0 20px var(--green); }
+.output-bit.v0 { color: #2a3f55; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>⚡ 논리 게이트 시뮬레이터</h1>
+  <p>스위치를 눌러 직접 체험해보세요 — 누르면 바로 반응합니다</p>
+</header>
+
+<div class="gate-nav">
+  <button class="gate-btn active" onclick="loadGate('NOT')">NOT</button>
+  <button class="gate-btn" onclick="loadGate('AND')">AND</button>
+  <button class="gate-btn" onclick="loadGate('OR')">OR</button>
+  <button class="gate-btn" onclick="loadGate('NAND')">NAND</button>
+  <button class="gate-btn" onclick="loadGate('NOR')">NOR</button>
+  <button class="gate-btn" onclick="loadGate('XOR')">XOR</button>
+  <button class="gate-btn" onclick="loadGate('XNOR')">XNOR</button>
+</div>
+
+<div class="main">
+  <!-- 왼쪽: 인터랙티브 -->
+  <div class="card interact-card">
+    <div class="card-title">🎮 직접 눌러보세요</div>
+
+    <div class="gate-banner">
+      <div class="gate-symbol" id="gSymbol">NOT</div>
+      <div class="gate-info">
+        <h2 id="gName">NOT 게이트</h2>
+        <p id="gNameKo">부정 게이트 — 반대로 뒤집기</p>
+        <div class="gate-formula" id="gFormula">출력 = Ā (A의 반대)</div>
+      </div>
+    </div>
+
+    <!-- 회로 시각화 -->
+    <div class="circuit">
+      <div class="inputs-col" id="inputsCol">
+        <div class="input-row">
+          <span class="input-label" id="labelA">A</span>
+          <div class="wire-h" id="wireA"></div>
+        </div>
+      </div>
+      <div class="gate-body" id="gateBody">NOT</div>
+      <div class="output-col">
+        <div class="wire-h" id="wireOut"></div>
+        <div class="led" id="ledOut"></div>
+        <div class="led-label" id="ledLabel">OFF</div>
+      </div>
+    </div>
+
+    <!-- 출력 비트 -->
+    <div class="output-bit v0" id="outputBit">0</div>
+
+    <!-- 스위치 -->
+    <div class="switch-section" id="switchSection">
+      <div class="sw-row single" onclick="toggleA()">
+        <div class="arcade-btn" id="btnA">A</div>
+        <div class="sw-info">
+          <div class="sw-name">입력 A</div>
+          <div class="sw-state" id="stateA">OFF (0)</div>
+          <div class="sw-volt" id="voltA">0 VDC</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 설명 -->
+    <div class="desc-box" id="descBox">
+      <strong>현재 상태</strong><br>
+      <span id="descText">A = 0 → 출력 = 1 (반전)</span>
+      <div class="result-text" id="resultText">입력이 0이면 → 출력은 1</div>
+    </div>
+  </div>
+
+  <!-- 오른쪽: 진리표 + 예시 -->
+  <div class="card truth-card">
+    <div class="card-title">📋 진리표 (Truth Table)</div>
+    <table class="truth-table" id="truthTable"></table>
+
+    <div class="example-box" id="exampleBox">
+      <div class="ex-title">⚙️ 실무 적용 예시</div>
+      <div id="exampleText"></div>
+    </div>
+
+    <div class="example-box" id="memBox" style="border-left: 3px solid var(--orange); background:#0d1620;">
+      <div class="ex-title" style="color:var(--orange)">🧠 암기 포인트</div>
+      <div id="memText"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── 게이트 데이터 ─────────────────────────────────
+const GATES = {
+  NOT: {
+    name: 'NOT 게이트',
+    nameKo: '부정 게이트 — 반대로 뒤집기',
+    symbol: 'NOT',
+    formula: '출력 = Ā  (A의 반대)',
+    inputs: 1,
+    fn: ([a]) => +!a,
+    table: [
+      { in: [0], out: 1 },
+      { in: [1], out: 0 },
+    ],
+    desc: (vals, out) =>
+      `A = ${vals[0]}  →  출력 = <strong style="color:${out?'#27ae60':'#e74c3c'}">${out}</strong><br>입력을 뒤집습니다`,
+    result: (vals, out) =>
+      out ? '입력이 0이라 → 출력은 1 ✅' : '입력이 1이라 → 출력은 0 ❌',
+    example: `<strong>비상정지(NC 접점)</strong><br>
+      비상정지 버튼 미누름(0) → 기계 동작 허가(1)<br>
+      비상정지 버튼 누름(1) → 기계 정지(0)<br><br>
+      <strong>NPN 센서 신호 변환</strong><br>
+      물체 없음(0) → PLC 입력(1) 처럼 동작하는 경우`,
+    mem: `"반대" 가 핵심<br>
+      0 → 1 / 1 → 0<br>
+      영문자 위에 <strong>줄 하나(Ā)</strong> 가 NOT의 수학 표기`
+  },
+  AND: {
+    name: 'AND 게이트',
+    nameKo: '논리곱 — 둘 다 1이어야 출력 1',
+    symbol: 'AND',
+    formula: '출력 = A · B  (A곱하기B)',
+    inputs: 2,
+    fn: ([a,b]) => a & b,
+    table: [
+      { in: [0,0], out: 0 },
+      { in: [0,1], out: 0 },
+      { in: [1,0], out: 0 },
+      { in: [1,1], out: 1 },
+    ],
+    desc: (vals, out) =>
+      `A=${vals[0]}, B=${vals[1]}  →  출력 = <strong style="color:${out?'#27ae60':'#e74c3c'}">${out}</strong>`,
+    result: (vals, out) =>
+      out ? 'A도 1이고 B도 1 → 출력 1 ✅' : `${vals[0]===0&&vals[1]===0?'둘 다 0':vals[0]===0?'A가 0':vals[1]===0?'B가 0':'?'} → 출력 0 ❌`,
+    example: `<strong>안전 인터록 (2중 잠금)</strong><br>
+      안전 도어 닫힘(A=1) AND 비상정지 미누름(B=1)<br>
+      → 두 조건 모두 충족 시에만 기계 가동(출력=1)<br><br>
+      <strong>PLC 조건 로직</strong><br>
+      센서1 감지(A=1) AND 센서2 감지(B=1) → 이젝터 동작`,
+    mem: `<strong>"AND = 교집합"</strong><br>
+      1이 하나라도 없으면 → 무조건 0<br>
+      1 AND 1 만 → 1<br>
+      나머지 조합(0,0 / 0,1 / 1,0) → 전부 0`
+  },
+  OR: {
+    name: 'OR 게이트',
+    nameKo: '논리합 — 하나라도 1이면 출력 1',
+    symbol: 'OR',
+    formula: '출력 = A + B  (A더하기B)',
+    inputs: 2,
+    fn: ([a,b]) => a | b,
+    table: [
+      { in: [0,0], out: 0 },
+      { in: [0,1], out: 1 },
+      { in: [1,0], out: 1 },
+      { in: [1,1], out: 1 },
+    ],
+    desc: (vals, out) =>
+      `A=${vals[0]}, B=${vals[1]}  →  출력 = <strong style="color:${out?'#27ae60':'#e74c3c'}">${out}</strong>`,
+    result: (vals, out) =>
+      out ? `${vals[0]===1&&vals[1]===1?'둘 다 1':vals[0]===1?'A가 1':vals[1]===1?'B가 1':'?'} → 출력 1 ✅` : '둘 다 0 → 출력 0 ❌',
+    example: `<strong>알람 통합</strong><br>
+      온도 센서 이상(A=1) OR 진동 센서 이상(B=1)<br>
+      → 하나라도 이상이면 경보 발생(출력=1)<br><br>
+      <strong>수동/자동 모드 선택</strong><br>
+      수동 버튼(A) OR 자동 신호(B) → 출력 동작`,
+    mem: `<strong>"OR = 합집합"</strong><br>
+      0이 하나라도 있어도 → 나머지가 1이면 1<br>
+      0 OR 0 만 → 0<br>
+      나머지 조합(0,1 / 1,0 / 1,1) → 전부 1`
+  },
+  NAND: {
+    name: 'NAND 게이트',
+    nameKo: 'NOT+AND — AND 결과를 뒤집기',
+    symbol: 'NAND',
+    formula: '출력 = ‾(A·B)  (AND를 반전)',
+    inputs: 2,
+    fn: ([a,b]) => +(!(a & b)),
+    table: [
+      { in: [0,0], out: 1 },
+      { in: [0,1], out: 1 },
+      { in: [1,0], out: 1 },
+      { in: [1,1], out: 0 },
+    ],
+    desc: (vals, out) =>
+      `A=${vals[0]}, B=${vals[1]}  →  AND=${+(vals[0]&vals[1])}  →  NOT → <strong style="color:${out?'#27ae60':'#e74c3c'}">${out}</strong>`,
+    result: (vals, out) =>
+      out ? `하나라도 0 → NAND 출력 1 ✅` : '둘 다 1 → AND=1 → 반전 → 출력 0 ❌',
+    example: `<strong>AND의 반대 조건 판단</strong><br>
+      두 조건이 동시에 충족될 때(둘 다 1) → 오히려 출력이 0<br>
+      → "두 신호 중 하나라도 0이면 동작" 회로에 사용<br><br>
+      <strong>특징</strong><br>
+      NAND 게이트만으로 AND/OR/NOT 모두 구현 가능<br>
+      → "만능 게이트(Universal Gate)"라고 부름`,
+    mem: `<strong>"NAND = AND 뒤집기"</strong><br>
+      AND 진리표를 완성한 뒤 출력만 전부 뒤집으면 NAND<br>
+      AND에서 유일하게 1인 경우(1,1) → NAND에서 유일하게 0`
+  },
+  NOR: {
+    name: 'NOR 게이트',
+    nameKo: 'NOT+OR — OR 결과를 뒤집기',
+    symbol: 'NOR',
+    formula: '출력 = ‾(A+B)  (OR를 반전)',
+    inputs: 2,
+    fn: ([a,b]) => +(!(a | b)),
+    table: [
+      { in: [0,0], out: 1 },
+      { in: [0,1], out: 0 },
+      { in: [1,0], out: 0 },
+      { in: [1,1], out: 0 },
+    ],
+    desc: (vals, out) =>
+      `A=${vals[0]}, B=${vals[1]}  →  OR=${+(vals[0]|vals[1])}  →  NOT → <strong style="color:${out?'#27ae60':'#e74c3c'}">${out}</strong>`,
+    result: (vals, out) =>
+      out ? '둘 다 0 → OR=0 → 반전 → 출력 1 ✅' : '하나라도 1 → OR=1 → 반전 → 출력 0 ❌',
+    example: `<strong>OR의 반대 조건 판단</strong><br>
+      두 신호가 모두 0일 때만 출력 1<br>
+      → "아무 이상도 없을 때만 동작" 회로<br><br>
+      <strong>특징</strong><br>
+      NOR 게이트만으로도 AND/OR/NOT 모두 구현 가능<br>
+      → NAND와 함께 "만능 게이트(Universal Gate)"`,
+    mem: `<strong>"NOR = OR 뒤집기"</strong><br>
+      OR 진리표를 완성한 뒤 출력만 전부 뒤집으면 NOR<br>
+      OR에서 유일하게 0인 경우(0,0) → NOR에서 유일하게 1`
+  },
+  XOR: {
+    name: 'XOR 게이트',
+    nameKo: '배타적 논리합 — 입력이 다를 때 1',
+    symbol: 'XOR',
+    formula: '출력 = A ⊕ B  (다르면 1)',
+    inputs: 2,
+    fn: ([a,b]) => a ^ b,
+    table: [
+      { in: [0,0], out: 0 },
+      { in: [0,1], out: 1 },
+      { in: [1,0], out: 1 },
+      { in: [1,1], out: 0 },
+    ],
+    desc: (vals, out) =>
+      `A=${vals[0]}, B=${vals[1]}  → ${vals[0]===vals[1]?'같음(같으면 0)':'다름(다르면 1)'}  →  <strong style="color:${out?'#27ae60':'#e74c3c'}">${out}</strong>`,
+    result: (vals, out) =>
+      out ? '입력이 서로 달라 → 출력 1 ✅' : '입력이 서로 같아 → 출력 0 ❌',
+    example: `<strong>비교 회로 (같은지 다른지 판단)</strong><br>
+      두 센서 값이 다를 때(XOR=1) → 오류 감지<br><br>
+      <strong>반가산기(Half Adder)</strong><br>
+      이진수 덧셈의 합(Sum)을 계산할 때 XOR 사용<br>
+      0+0=0 / 0+1=1 / 1+0=1 / 1+1=10(올림 발생)<br><br>
+      <strong>암호화(간단한 XOR 암호)</strong><br>
+      데이터 XOR 키 → 암호화 / 암호화 XOR 키 → 복호화`,
+    mem: `<strong>"XOR = 다르면 1, 같으면 0"</strong><br>
+      eXclusive OR = 배타적(독점적) OR<br>
+      두 값이 같으면 → 0 (AND, OR와 다른 유일한 특징)<br>
+      두 값이 다르면 → 1<br>
+      기호: <strong>⊕</strong> (동그라미 안에 +)`
+  },
+  XNOR: {
+    name: 'XNOR 게이트',
+    nameKo: 'NOT+XOR — 입력이 같을 때 1',
+    symbol: 'XNOR',
+    formula: '출력 = ‾(A⊕B)  (같으면 1)',
+    inputs: 2,
+    fn: ([a,b]) => +(!(a ^ b)),
+    table: [
+      { in: [0,0], out: 1 },
+      { in: [0,1], out: 0 },
+      { in: [1,0], out: 0 },
+      { in: [1,1], out: 1 },
+    ],
+    desc: (vals, out) =>
+      `A=${vals[0]}, B=${vals[1]}  → ${vals[0]===vals[1]?'같음(같으면 1)':'다름(다르면 0)'}  →  <strong style="color:${out?'#27ae60':'#e74c3c'}">${out}</strong>`,
+    result: (vals, out) =>
+      out ? '입력이 서로 같아 → 출력 1 ✅' : '입력이 서로 달라 → 출력 0 ❌',
+    example: `<strong>일치 검출 회로 (동등 비교)</strong><br>
+      두 신호가 같을 때(XNOR=1) → "정상" 출력<br>
+      두 신호가 다를 때(XNOR=0) → "불일치" 검출<br><br>
+      <strong>이중화 시스템 감시</strong><br>
+      주계통과 부계통 신호가 같은지 비교<br>
+      → 불일치(XNOR=0) → 시스템 이상 경보`,
+    mem: `<strong>"XNOR = XOR 뒤집기 = 같으면 1"</strong><br>
+      XOR 진리표를 완성한 뒤 출력만 전부 뒤집으면 XNOR<br>
+      XOR와 정확히 반대<br>
+      0,0 → 1 / 0,1 → 0 / 1,0 → 0 / 1,1 → 1`
+  }
+};
+
+// ── 상태 ─────────────────────────────────────────
+let currentGate = 'NOT';
+let inputVals = [0, 0];
+
+function loadGate(name) {
+  currentGate = name;
+  inputVals = [0, 0];
+
+  // 버튼 active
+  document.querySelectorAll('.gate-btn').forEach(b => {
+    b.classList.toggle('active', b.textContent.trim() === name);
+  });
+
+  const g = GATES[name];
+
+  // 배너
+  document.getElementById('gSymbol').textContent = g.symbol;
+  document.getElementById('gName').textContent = g.name;
+  document.getElementById('gNameKo').textContent = g.nameKo;
+  document.getElementById('gFormula').textContent = g.formula;
+
+  // 게이트 박스 텍스트
+  document.getElementById('gateBody').textContent = g.symbol;
+
+  // 스위치 UI
+  const sec = document.getElementById('switchSection');
+  const col = document.getElementById('inputsCol');
+
+  if (g.inputs === 1) {
+    sec.innerHTML = `
+      <div class="sw-row single" onclick="toggleInput(0)">
+        <div class="arcade-btn" id="btnA">A</div>
+        <div class="sw-info">
+          <div class="sw-name">입력 A</div>
+          <div class="sw-state" id="stateA">OFF (0)</div>
+          <div class="sw-volt" id="voltA">0 VDC</div>
+        </div>
+      </div>`;
+    col.innerHTML = `
+      <div class="input-row">
+        <span class="input-label">A</span>
+        <div class="wire-h" id="wireA"></div>
+      </div>`;
+  } else {
+    sec.innerHTML = `
+      <div class="sw-row" onclick="toggleInput(0)">
+        <div class="arcade-btn" id="btnA">A</div>
+        <div class="sw-info">
+          <div class="sw-name">입력 A</div>
+          <div class="sw-state" id="stateA">OFF (0)</div>
+          <div class="sw-volt" id="voltA">0 VDC</div>
+        </div>
+      </div>
+      <div class="sw-row" onclick="toggleInput(1)">
+        <div class="arcade-btn" id="btnB">B</div>
+        <div class="sw-info">
+          <div class="sw-name">입력 B</div>
+          <div class="sw-state" id="stateB">OFF (0)</div>
+          <div class="sw-volt" id="voltB">0 VDC</div>
+        </div>
+      </div>`;
+    col.innerHTML = `
+      <div class="input-row">
+        <span class="input-label">A</span>
+        <div class="wire-h" id="wireA"></div>
+      </div>
+      <div class="input-row">
+        <span class="input-label">B</span>
+        <div class="wire-h" id="wireB"></div>
+      </div>`;
+  }
+
+  // 진리표
+  buildTable(g);
+
+  // 예시
+  document.getElementById('exampleText').innerHTML = g.example;
+  document.getElementById('memText').innerHTML = g.mem;
+
+  // 초기 렌더
+  render();
+}
+
+function buildTable(g) {
+  const hdrs = g.inputs === 1
+    ? '<tr><th>A</th><th>출력</th></tr>'
+    : '<tr><th>A</th><th>B</th><th>출력</th></tr>';
+  const rows = g.table.map((r, i) => {
+    const cells = r.in.map(v => `<td>${v}</td>`).join('');
+    const outCell = r.out === 1
+      ? `<td style="color:#27ae60">1 🟢</td>`
+      : `<td style="color:#e74c3c">0 ⚫</td>`;
+    return `<tr id="tr${i}">${cells}${outCell}</tr>`;
+  }).join('');
+  document.getElementById('truthTable').innerHTML = hdrs + rows;
+}
+
+function toggleInput(idx) {
+  inputVals[idx] = inputVals[idx] === 0 ? 1 : 0;
+  render();
+}
+
+function render() {
+  const g = GATES[currentGate];
+  const vals = inputVals.slice(0, g.inputs);
+  const out = g.fn(vals);
+
+  // 스위치 상태
+  vals.forEach((v, i) => {
+    const id = ['A','B'][i];
+    const btn = document.getElementById('btn'+id);
+    const state = document.getElementById('state'+id);
+    const volt = document.getElementById('volt'+id);
+    const wire = document.getElementById('wire'+id);
+    if (!btn) return;
+    btn.classList.toggle('pressed', v === 1);
+    state.textContent = v ? 'ON  (1)' : 'OFF (0)';
+    state.className = 'sw-state' + (v ? ' on' : '');
+    volt.textContent = v ? '24 VDC' : '0 VDC';
+    if (wire) wire.classList.toggle('live', v === 1);
+  });
+
+  // 게이트 glow
+  document.getElementById('gateBody').classList.toggle('glow', out === 1);
+
+  // 출력선 + LED
+  const wireOut = document.getElementById('wireOut');
+  const led = document.getElementById('ledOut');
+  const ledLbl = document.getElementById('ledLabel');
+  const bitEl = document.getElementById('outputBit');
+  wireOut.classList.toggle('live', out === 1);
+  led.classList.toggle('on', out === 1);
+  ledLbl.textContent = out ? 'ON' : 'OFF';
+  ledLbl.className = 'led-label' + (out ? ' on' : '');
+  bitEl.textContent = out;
+  bitEl.className = 'output-bit ' + (out ? 'v1' : 'v0');
+
+  // 진리표 하이라이트
+  g.table.forEach((_, i) => {
+    const tr = document.getElementById('tr'+i);
+    if (!tr) return;
+    tr.className = '';
+  });
+  // 현재 행 찾기
+  const rowIdx = g.table.findIndex(r =>
+    r.in.every((v, i) => v === vals[i])
+  );
+  if (rowIdx >= 0) {
+    const tr = document.getElementById('tr'+rowIdx);
+    tr.className = out ? 'active' : 'active-off';
+  }
+
+  // 설명
+  document.getElementById('descBox').innerHTML =
+    `<strong>현재 상태</strong><br>${g.desc(vals, out)}` +
+    `<div class="result-text">${g.result(vals, out)}</div>`;
+}
+
+// ── 초기 로드 ─────────────────────────────────────
+loadGate('NOT');
+</script>
+</body>
+</html>
